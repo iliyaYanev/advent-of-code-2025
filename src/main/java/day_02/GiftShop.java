@@ -11,15 +11,11 @@ public class GiftShop {
             long end = Long.parseLong(range.split("-")[1]);
 
             for (long i = start; i <= end; i++) {
-                if(newRules) {
-                    if(String.valueOf(i).matches("^([1-9]\\d*)\\1+$")) {
-                        sum += i;
-                    }
+                if(newRules && String.valueOf(i).matches("^([1-9]\\d*)\\1+$")) {
+                    sum += i;
                 }
-                else {
-                    if(String.valueOf(i).matches("^([1-9]\\d*)\\1$")) {
-                        sum += i;
-                    }
+                else if (String.valueOf(i).matches("^([1-9]\\d*)\\1$")) {
+                    sum += i;
                 }
             }
         }
