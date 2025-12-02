@@ -1,7 +1,6 @@
 package day_01;
 
 import java.util.List;
-import util.Direction;
 import util.Rotation;
 import util.RotationResult;
 
