@@ -7,3 +7,4 @@
 * ##### [Lobby](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_03) **-** [Maximum Sum Subsequence](https://www.geeksforgeeks.org/dsa/maximum-sum-subsequence/)
 * ##### [Printing Department](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_04) **-** [Erosion (morphology)](https://en.wikipedia.org/wiki/Erosion_(morphology))
 * ##### [Cafeteria](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_05) **-** [Greedy Interval Merging](https://www.geeksforgeeks.org/dsa/merging-intervals/)
+* ##### [Trash Compactor](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_06) **-** [Dijkstra Shortest Paths](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)
