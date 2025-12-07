@@ -9,8 +9,6 @@ public class Position {
     private int y;
     private int z;
 
-    private int weight;
-
     public Position(int x, int y) {
         this.x = x;
         this.y = y;
@@ -23,13 +21,21 @@ public class Position {
         this.z = z;
     }
 
-    public void set(int x, int y) {
-        this.x = x;
-        this.y = y;
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getZ() {
+        return z;
     }
 
     public List<Position> allNeighbors() {
         List<Position> neighbors = new ArrayList<>();
+
         for (int xDelta = -1; xDelta <= 1; xDelta++) {
             for (int yDelta = -1; yDelta <= 1; yDelta++) {
                 if (xDelta != 0 || yDelta != 0) {
@@ -37,6 +43,7 @@ public class Position {
                 }
             }
         }
+
         return neighbors;
     }
 
@@ -70,9 +77,5 @@ public class Position {
     @Override
     public String toString() {
         return (x + " " + y);
-    }
-
-    public String augmentedToString() {
-        return (x + " " + y + " " + z + " " + weight);
     }
 }
