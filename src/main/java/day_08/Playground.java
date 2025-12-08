@@ -1,111 +1,164 @@
 package day_08;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import util.Box;
-import util.Pair;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+import util.Connection;
+import util.Junction;
 
 public class Playground {
 
-    public static long largestCircuits(List<String> fileContents, int pairs) {
-        List<Box> boxes = new ArrayList<>();
-        Set<Pair> closest = new HashSet<>();
-        Map<Integer, Integer> cycles = new HashMap<>();
+    public static long calculateCircuits(List<String> fileContents, boolean isSmall) {
+        List<Junction> junctionBoxes = parseJunctionBoxes(fileContents);
 
-        int applies = 0;
-        int tries = 0;
+        List<Set<Junction>> circuits = calculateCircuits(calculateDistances(junctionBoxes), junctionBoxes);
 
-        for (int i = 0; i < fileContents.size(); i++) {
-            String[] line = fileContents.get(i).split(",");
+        sortCircuits(circuits);
 
-            boxes.add(new Box(
-                Integer.parseInt(line[0]),
-                Integer.parseInt(line[1]),
-                Integer.parseInt(line[2]), i)
+        return isSmall ? calculateProduct(circuits) :
+            calculateFinalConnection(calculateDistances(junctionBoxes), junctionBoxes);
+    }
+
+    private static List<Junction> parseJunctionBoxes(List<String> fileContents) {
+        List<Junction> junctions = new ArrayList<>();
+
+        for (String line : fileContents) {
+            String[] splitLine = line.split(",");
+
+            junctions.add(new Junction(
+                Long.parseLong(splitLine[0]),
+                Long.parseLong(splitLine[1]),
+                Long.parseLong(splitLine[2]))
             );
         }
 
-        while(tries < pairs) {
-            Pair pair = closest(boxes, closest);
-            closest.add(pair);
-
-            if(apply(pair, boxes)) {
-                applies++;
-
-                if(applies == 999 && pairs > 1000) {
-                    return (long) boxes.get(pair.a()).getX() * boxes.get(pair.b()).getX();
-                }
-            }
-            tries++;
-        }
-
-        for(Box box: boxes){
-            int id = box.getId();
-
-            if(cycles.containsKey(id)) {
-                cycles.put(id, cycles.get(id) + 1);
-            }
-            else {
-                cycles.put(id, 1);
-            }
-        }
-
-        List<Integer> c = new ArrayList<>(cycles.values());
-
-        Collections.sort(c);
-        Collections.reverse(c);
-
-        return ((long) c.get(0) * c.get(1) * c.get(2));
+        return junctions;
     }
 
-    private static boolean apply(Pair pair, List<Box> boxes){
-        boolean changed = false;
-        int a = boxes.get(pair.a()).getId();
-        int b = boxes.get(pair.b()).getId();
-        if(a == b){
-            return false;
-        }
-        for(Box box: boxes){
-            if(box.getId() == a){
-                box.setId(b);
-                changed = true;
+    private static Map<Double, Connection> calculateDistances(List<Junction> coordinates) {
+        // Distances between two junctions.
+        TreeMap<Double, Connection> connectionDistances = new TreeMap<>();
+
+        for (Junction x : coordinates) {
+            for (Junction y : coordinates) {
+                if (!x.equals(y)) {
+                    connectionDistances.put(x.getDistance(y), new Connection(x, y));
+                }
             }
         }
 
-        return changed;
+        return connectionDistances;
     }
 
-    private static Pair closest(List<Box> boxes, Set<Pair> closest){
-        long distance = Long.MAX_VALUE;
-        Pair answer = null;
+    private static List<Set<Junction>> calculateCircuits(Map<Double, Connection> connectionDistances, List<Junction> junctionBoxes) {
+        int iterations = 0;
 
-        for(int i = 0; i < boxes.size(); i++){
-            for(int j = i + 1; j < boxes.size(); j++){
-                Pair candidate = new Pair(i,j);
+        // The list of all circuits (with a circuit being defined as a Set of junction
+        // boxes), initialized a list of sets of single junction boxes.
+        List<Set<Junction>> circuits = junctionBoxes.stream().map(j -> new HashSet<>(Set.of(j)))
+            .collect(Collectors.toList());
 
-                if(closest.contains(candidate)){
-                    continue;
+        for (Connection connection : connectionDistances.values()) {
+            Junction first = connection.first();
+            Junction second = connection.second();
+
+            List<Set<Junction>> combinedCircuits = new ArrayList<>();
+
+            for (Set<Junction> circuit : circuits) {
+                if (circuit.contains(first) || circuit.contains(second)) {
+                    circuit.add(first);
+                    circuit.add(second);
+                    // Add this circuit to the list of combined circuits.
+                    combinedCircuits.add(circuit);
+                }
+            }
+
+            if (combinedCircuits.size() > 1) {
+                Set<Junction> total = new HashSet<>();
+
+                for (Set<Junction> circuit : combinedCircuits) {
+                    circuits.remove(circuit);
+                    total.addAll(circuit);
                 }
 
-                Box box1 = boxes.get(i);
-                Box box2 = boxes.get(j);
+                circuits.add(total);
+            }
 
-                long dist = (((long) box1.getX() - box2.getX()) * (box1.getX() - box2.getX())) +
-                    (((long) box1.getY() - box2.getY()) * (box1.getY() - box2.getY())) +
-                    (((long) box1.getZ() - box2.getZ()) * (box1.getZ() - box2.getZ()));
-
-                if(dist < distance){
-                    distance = dist;
-                    answer = candidate;
-                }
+            iterations++;
+            if (iterations == 1000) {
+                break;
             }
         }
 
-        return answer;
+        return circuits;
+    }
+
+    private static long calculateProduct(List<Set<Junction>> circuits) {
+        long total = 1;
+        int i = 0;
+
+        for (Set<Junction> circuit : circuits) {
+            total *= circuit.size();
+            i++;
+
+            if (i == 3) {
+                break;
+            }
+        }
+
+        return total;
+    }
+
+    private static void sortCircuits(List<Set<Junction>> circuits) {
+        // Sort the circuits by their size.
+        circuits.sort((o1, o2) -> o2.size() - o1.size());
+    }
+
+    private static long calculateFinalConnection(Map<Double, Connection> connectionDistances, List<Junction> junctionBoxes) {
+        List<Set<Junction>> circuits = junctionBoxes.stream().map(jb -> new HashSet<>(Set.of(jb)))
+            .collect(Collectors.toList());
+
+        for (Connection connection : connectionDistances.values()) {
+            Junction first = connection.first();
+            Junction second = connection.second();
+
+            // A list of circuits which were combined as a result of adding the two junction
+            // boxes first and second.
+            List<Set<Junction>> combinedCircuits = new ArrayList<>();
+
+            for (Set<Junction> circuit : circuits) {
+                if (circuit.contains(first) || circuit.contains(second)) {
+                    // This circuit contains first or second, so add the other one to it (it's a Set, so
+                    // doubling is not a problem).
+                    circuit.add(first);
+                    circuit.add(second);
+                    // Add this circuit to the list of combined circuits.
+                    combinedCircuits.add(circuit);
+                }
+            }
+
+            if (combinedCircuits.size() > 1) {
+                // More than one circuits was altered as a result of adding the two junction
+                // boxes, so combine those.
+                Set<Junction> total = new HashSet<>();
+                for (Set<Junction> circuit : combinedCircuits) {
+                    circuits.remove(circuit);
+                    total.addAll(circuit);
+                }
+
+                circuits.add(total);
+            }
+
+            if (circuits.size() == 1 && circuits.getFirst().size() == junctionBoxes.size()) {
+                // There is only 1 circuits and it contains all junction boxes.
+                return first.x() * second.x();
+            }
+        }
+
+        throw new IllegalArgumentException("No pair of junction boxes leads to 1 big circuit");
     }
 }

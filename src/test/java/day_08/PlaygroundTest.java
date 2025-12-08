@@ -21,14 +21,14 @@ public class PlaygroundTest {
 
     @Test
     public void playgroundPartOneTest() {
-        long result = Playground.largestCircuits(FILE_CONTENTS, 1000);
+        long result = Playground.calculateCircuits(FILE_CONTENTS, true);
 
         assertEquals(131580, result);
     }
 
     @Test
     public void playgroundPartTwoTest() {
-        long result = Playground.largestCircuits(FILE_CONTENTS, 1000000);
+        long result = Playground.calculateCircuits(FILE_CONTENTS, false);
 
         assertEquals(6844224, result);
     }
