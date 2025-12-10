@@ -52,13 +52,16 @@ public class MovieTheater {
     }
 
     private static Stream<Coordinate[]> pairStream(List<Coordinate> coords) {
-        int n = coords.size();
+        // Convert to array for faster access
+        Coordinate[] arr = coords.toArray(new Coordinate[0]);
+        int n = arr.length;
 
         return IntStream.range(0, n)
+            .parallel() // Use parallel processing for large coordinate sets
             .boxed()
             .flatMap(i ->
                 IntStream.range(i + 1, n)
-                    .mapToObj(j -> new Coordinate[]{coords.get(i), coords.get(j)})
+                    .mapToObj(j -> new Coordinate[]{arr[i], arr[j]})
             );
     }
 

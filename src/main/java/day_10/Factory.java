@@ -102,6 +102,7 @@ public class Factory {
         return 0;
     }
 
+    @SuppressWarnings("unchecked")
     private static long joltage(Machine machine) {
         try (Context ctx = new Context()) {
             Optimize opt = ctx.mkOptimize();
@@ -115,7 +116,7 @@ public class Factory {
 
             // Add constraints for each light/joltage
             for (int i = 0; i < machine.joltages().length; i++) {
-                List<ArithExpr> affectingList = new ArrayList<>();
+                List<ArithExpr<?>> affectingList = new ArrayList<>();
 
                 for (int j = 0; j < machine.buttons().size(); j++) {
                     if (machine.buttons().get(j).contains(i)) {
@@ -125,8 +126,8 @@ public class Factory {
 
                 if (!affectingList.isEmpty()) {
                     // Convert list to properly typed array
-                    ArithExpr[] affectingArray = affectingList.toArray(new ArithExpr[0]);
-                    ArithExpr sum;
+                    ArithExpr<?>[] affectingArray = affectingList.toArray(new ArithExpr[0]);
+                    ArithExpr<?> sum;
 
                     if (affectingArray.length == 1) {
                         sum = affectingArray[0];
@@ -139,7 +140,7 @@ public class Factory {
             }
 
             // Minimize total presses
-            ArithExpr totalPresses = presses.length == 1 ? presses[0] : ctx.mkAdd(presses);
+            ArithExpr<?> totalPresses = presses.length == 1 ? presses[0] : ctx.mkAdd(presses);
             opt.MkMinimize(totalPresses);
 
             // Solve
