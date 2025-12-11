@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
 
@@ -97,8 +98,20 @@ public class MovieTheater {
     }
 
     private static long rectangleAreaContainment(List<Coordinate> coords, Polygon poly) {
+        Envelope envelope = poly.getEnvelopeInternal();
+
         return pairStream(coords)
             .filter(pair -> {
+                double xMin = Math.min(pair[0].x, pair[1].x);
+                double xMax = Math.max(pair[0].x, pair[1].x);
+                double yMin = Math.min(pair[0].y, pair[1].y);
+                double yMax = Math.max(pair[0].y, pair[1].y);
+
+                if (xMin < envelope.getMinX() || xMax > envelope.getMaxX() ||
+                    yMin < envelope.getMinY() || yMax > envelope.getMaxY()) {
+                    return false;
+                }
+
                 Polygon rect = createRectangle(pair[0], pair[1]);
                 return poly.contains(rect);
             })

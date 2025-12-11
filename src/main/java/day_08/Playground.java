@@ -15,12 +15,13 @@ public class Playground {
     public static long calculateCircuits(List<String> fileContents, boolean isSmall) {
         List<Junction> junctionBoxes = parseJunctionBoxes(fileContents);
 
-        List<Set<Junction>> circuits = calculateCircuits(calculateDistances(junctionBoxes), junctionBoxes);
+        Map<Double, Connection> distances = calculateDistances(junctionBoxes);
+        List<Set<Junction>> circuits = calculateCircuits(distances, junctionBoxes);
 
         sortCircuits(circuits);
 
         return isSmall ? calculateProduct(circuits) :
-            calculateFinalConnection(calculateDistances(junctionBoxes), junctionBoxes);
+            calculateFinalConnection(distances, junctionBoxes);
     }
 
     private static List<Junction> parseJunctionBoxes(List<String> fileContents) {
@@ -55,38 +56,12 @@ public class Playground {
     }
 
     private static List<Set<Junction>> calculateCircuits(Map<Double, Connection> connectionDistances, List<Junction> junctionBoxes) {
-        int iterations = 0;
-
-        // The list of all circuits (with a circuit being defined as a Set of junction
-        // boxes), initialized a list of sets of single junction boxes.
         List<Set<Junction>> circuits = junctionBoxes.stream().map(j -> new HashSet<>(Set.of(j)))
             .collect(Collectors.toList());
 
+        int iterations = 0;
         for (Connection connection : connectionDistances.values()) {
-            Junction first = connection.first();
-            Junction second = connection.second();
-
-            List<Set<Junction>> combinedCircuits = new ArrayList<>();
-
-            for (Set<Junction> circuit : circuits) {
-                if (circuit.contains(first) || circuit.contains(second)) {
-                    circuit.add(first);
-                    circuit.add(second);
-                    // Add this circuit to the list of combined circuits.
-                    combinedCircuits.add(circuit);
-                }
-            }
-
-            if (combinedCircuits.size() > 1) {
-                Set<Junction> total = new HashSet<>();
-
-                for (Set<Junction> circuit : combinedCircuits) {
-                    circuits.remove(circuit);
-                    total.addAll(circuit);
-                }
-
-                circuits.add(total);
-            }
+            mergeCircuits(circuits, connection);
 
             iterations++;
             if (iterations == 1000) {
@@ -95,6 +70,32 @@ public class Playground {
         }
 
         return circuits;
+    }
+
+    private static void mergeCircuits(List<Set<Junction>> circuits, Connection connection) {
+        Junction first = connection.first();
+        Junction second = connection.second();
+
+        List<Set<Junction>> combinedCircuits = new ArrayList<>();
+
+        for (Set<Junction> circuit : circuits) {
+            if (circuit.contains(first) || circuit.contains(second)) {
+                circuit.add(first);
+                circuit.add(second);
+                combinedCircuits.add(circuit);
+            }
+        }
+
+        if (combinedCircuits.size() > 1) {
+            Set<Junction> total = new HashSet<>();
+
+            for (Set<Junction> circuit : combinedCircuits) {
+                circuits.remove(circuit);
+                total.addAll(circuit);
+            }
+
+            circuits.add(total);
+        }
     }
 
     private static long calculateProduct(List<Set<Junction>> circuits) {
@@ -123,39 +124,10 @@ public class Playground {
             .collect(Collectors.toList());
 
         for (Connection connection : connectionDistances.values()) {
-            Junction first = connection.first();
-            Junction second = connection.second();
-
-            // A list of circuits which were combined as a result of adding the two junction
-            // boxes first and second.
-            List<Set<Junction>> combinedCircuits = new ArrayList<>();
-
-            for (Set<Junction> circuit : circuits) {
-                if (circuit.contains(first) || circuit.contains(second)) {
-                    // This circuit contains first or second, so add the other one to it (it's a Set, so
-                    // doubling is not a problem).
-                    circuit.add(first);
-                    circuit.add(second);
-                    // Add this circuit to the list of combined circuits.
-                    combinedCircuits.add(circuit);
-                }
-            }
-
-            if (combinedCircuits.size() > 1) {
-                // More than one circuits was altered as a result of adding the two junction
-                // boxes, so combine those.
-                Set<Junction> total = new HashSet<>();
-                for (Set<Junction> circuit : combinedCircuits) {
-                    circuits.remove(circuit);
-                    total.addAll(circuit);
-                }
-
-                circuits.add(total);
-            }
+            mergeCircuits(circuits, connection);
 
             if (circuits.size() == 1 && circuits.getFirst().size() == junctionBoxes.size()) {
-                // There is only 1 circuits and it contains all junction boxes.
-                return first.x() * second.x();
+                return connection.first().x() * connection.second().x();
             }
         }
 

@@ -5,20 +5,20 @@ import java.util.List;
 
 public class Position {
 
-    private int x;
-    private int y;
-    private int z;
+    private static final int[][] ALL_NEIGHBOR_OFFSETS = {
+        {-1, -1}, {-1, 0}, {-1, 1},
+        {0, -1},           {0, 1},
+        {1, -1},  {1, 0},  {1, 1}
+    };
+
+    private final int x;
+    private final int y;
+    private final int z;
 
     public Position(int x, int y) {
         this.x = x;
         this.y = y;
         this.z = 0;
-    }
-
-    public Position(int x, int y, int z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
     }
 
     public int getX() {
@@ -29,33 +29,11 @@ public class Position {
         return y;
     }
 
-    public int getZ() {
-        return z;
-    }
-
     public List<Position> allNeighbors() {
-        List<Position> neighbors = new ArrayList<>();
+        List<Position> neighbors = new ArrayList<>(8);
 
-        for (int xDelta = -1; xDelta <= 1; xDelta++) {
-            for (int yDelta = -1; yDelta <= 1; yDelta++) {
-                if (xDelta != 0 || yDelta != 0) {
-                    neighbors.add(new Position(x + xDelta, y + yDelta));
-                }
-            }
-        }
-
-        return neighbors;
-    }
-
-    public List<Position> diagonalNeighbors() {
-        List<Position> neighbors = new ArrayList<>();
-
-        for (int xDelta = -1; xDelta <= 1; xDelta++) {
-            for (int yDelta = -1; yDelta <= 1; yDelta++) {
-                if (xDelta != 0 && yDelta != 0) {
-                    neighbors.add(new Position(x + xDelta, y + yDelta));
-                }
-            }
+        for (int[] offset : ALL_NEIGHBOR_OFFSETS) {
+            neighbors.add(new Position(x + offset[0], y + offset[1]));
         }
 
         return neighbors;

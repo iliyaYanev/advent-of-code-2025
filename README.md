@@ -12,3 +12,4 @@
 * ##### [Playground](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_08) **-** [Disjoint-Set (Union-Find)](https://en.wikipedia.org/wiki/Disjoint-set_data_structure)
 * ##### [Movie Theater](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_09) **-** [Largest Rectangle In A Matrix](https://medium.com/data-science/largest-rectangle-in-a-matrix-33dd93bd2c45)
 * ##### [Factory](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_10) **-** [Flood Fill BFS](https://www.geeksforgeeks.org/dsa/flood-fill-algorithm/)
+* ##### [Reactor](https://github.com/iliyaYanev/advent-of-code-2025/tree/master/src/main/java/day_11) **-** []()

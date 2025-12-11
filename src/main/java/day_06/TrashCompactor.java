@@ -59,10 +59,10 @@ public class TrashCompactor {
             }
         } else {
             for(int i = length - 1; i >= 0; i--){
-                StringBuilder tmp = new StringBuilder();
+                StringBuilder tmp = new StringBuilder(strings.size());
 
                 for(String s: strings){
-                    tmp.append(s.substring(index, index + length).charAt(i));
+                    tmp.append(s.charAt(index + i));
                 }
 
                 numbers.add(Long.parseLong(tmp.toString().trim()));
