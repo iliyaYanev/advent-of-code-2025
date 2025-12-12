@@ -1,31 +1,25 @@
 package day_08;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 import util.Connection;
 import util.Junction;
+import util.UnionFind;
 
 public class Playground {
 
     public static long calculateCircuits(List<String> fileContents, boolean isSmall) {
         List<Junction> junctionBoxes = parseJunctionBoxes(fileContents);
 
-        Map<Double, Connection> distances = calculateDistances(junctionBoxes);
-        List<Set<Junction>> circuits = calculateCircuits(distances, junctionBoxes);
+        List<Connection> sortedConnections = calculateDistances(junctionBoxes);
 
-        sortCircuits(circuits);
-
-        return isSmall ? calculateProduct(circuits) :
-            calculateFinalConnection(distances, junctionBoxes);
+        return isSmall ? calculateProduct(sortedConnections, junctionBoxes) :
+            calculateFinalConnection(sortedConnections, junctionBoxes);
     }
 
     private static List<Junction> parseJunctionBoxes(List<String> fileContents) {
-        List<Junction> junctions = new ArrayList<>();
+        List<Junction> junctions = new ArrayList<>(fileContents.size());
 
         for (String line : fileContents) {
             String[] splitLine = line.split(",");
@@ -40,94 +34,53 @@ public class Playground {
         return junctions;
     }
 
-    private static Map<Double, Connection> calculateDistances(List<Junction> coordinates) {
-        // Distances between two junctions.
-        TreeMap<Double, Connection> connectionDistances = new TreeMap<>();
+    private static List<Connection> calculateDistances(List<Junction> coordinates) {
+        int n = coordinates.size();
+        List<Connection> connections = new ArrayList<>(n * (n - 1) / 2);
 
-        for (Junction x : coordinates) {
-            for (Junction y : coordinates) {
-                if (!x.equals(y)) {
-                    connectionDistances.put(x.getDistance(y), new Connection(x, y));
+        // Only calculate each unique pair once (i, j where i < j)
+        for (int i = 0; i < n; i++) {
+            Junction x = coordinates.get(i);
+            for (int j = i + 1; j < n; j++) {
+                Junction y = coordinates.get(j);
+                connections.add(new Connection(x, y));
+            }
+        }
+
+        // Sort by distance (ascending) using cached distanceSquared
+        connections.sort(Comparator.comparingDouble(Connection::distanceSquared));
+
+        return connections;
+    }
+
+    private static long calculateProduct(List<Connection> sortedConnections, List<Junction> junctionBoxes) {
+        UnionFind<Junction> uf = new UnionFind<>(junctionBoxes);
+
+        // Process first 1000 connections (not 1000 successful unions)
+        int iterations = Math.min(1000, sortedConnections.size());
+        for (int i = 0; i < iterations; i++) {
+            Connection connection = sortedConnections.get(i);
+            uf.union(connection.first(), connection.second());
+        }
+
+        // Get sizes of top 3 components
+        int[] componentSizes = uf.getComponentSizes();
+        long product = 1;
+        for (int i = 0; i < Math.min(3, componentSizes.length); i++) {
+            product *= componentSizes[i];
+        }
+        return product;
+    }
+
+    private static long calculateFinalConnection(List<Connection> sortedConnections, List<Junction> junctionBoxes) {
+        UnionFind<Junction> uf = new UnionFind<>(junctionBoxes);
+
+        for (Connection connection : sortedConnections) {
+            if (uf.union(connection.first(), connection.second())) {
+                // Check if all junctions are now connected
+                if (uf.getComponentCount() == 1) {
+                    return connection.first().x() * connection.second().x();
                 }
-            }
-        }
-
-        return connectionDistances;
-    }
-
-    private static List<Set<Junction>> calculateCircuits(Map<Double, Connection> connectionDistances, List<Junction> junctionBoxes) {
-        List<Set<Junction>> circuits = junctionBoxes.stream().map(j -> new HashSet<>(Set.of(j)))
-            .collect(Collectors.toList());
-
-        int iterations = 0;
-        for (Connection connection : connectionDistances.values()) {
-            mergeCircuits(circuits, connection);
-
-            iterations++;
-            if (iterations == 1000) {
-                break;
-            }
-        }
-
-        return circuits;
-    }
-
-    private static void mergeCircuits(List<Set<Junction>> circuits, Connection connection) {
-        Junction first = connection.first();
-        Junction second = connection.second();
-
-        List<Set<Junction>> combinedCircuits = new ArrayList<>();
-
-        for (Set<Junction> circuit : circuits) {
-            if (circuit.contains(first) || circuit.contains(second)) {
-                circuit.add(first);
-                circuit.add(second);
-                combinedCircuits.add(circuit);
-            }
-        }
-
-        if (combinedCircuits.size() > 1) {
-            Set<Junction> total = new HashSet<>();
-
-            for (Set<Junction> circuit : combinedCircuits) {
-                circuits.remove(circuit);
-                total.addAll(circuit);
-            }
-
-            circuits.add(total);
-        }
-    }
-
-    private static long calculateProduct(List<Set<Junction>> circuits) {
-        long total = 1;
-        int i = 0;
-
-        for (Set<Junction> circuit : circuits) {
-            total *= circuit.size();
-            i++;
-
-            if (i == 3) {
-                break;
-            }
-        }
-
-        return total;
-    }
-
-    private static void sortCircuits(List<Set<Junction>> circuits) {
-        // Sort the circuits by their size.
-        circuits.sort((o1, o2) -> o2.size() - o1.size());
-    }
-
-    private static long calculateFinalConnection(Map<Double, Connection> connectionDistances, List<Junction> junctionBoxes) {
-        List<Set<Junction>> circuits = junctionBoxes.stream().map(jb -> new HashSet<>(Set.of(jb)))
-            .collect(Collectors.toList());
-
-        for (Connection connection : connectionDistances.values()) {
-            mergeCircuits(circuits, connection);
-
-            if (circuits.size() == 1 && circuits.getFirst().size() == junctionBoxes.size()) {
-                return connection.first().x() * connection.second().x();
             }
         }
 

@@ -1,121 +1,110 @@
 package day_09;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.prep.PreparedGeometry;
+import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 
 public class MovieTheater {
 
     private static final GeometryFactory gf = new GeometryFactory();
 
     public static long largestRectangleArea(List<String> fileContents, boolean isRedGreen) {
-        long largestRectangleArea;
+        double[][] coords = parseCoordinates(fileContents);
 
-        List<Coordinate> coords = parseCoordinates(fileContents);
-        Polygon poly = createPolygon(coords);
-
-        largestRectangleArea = isRedGreen ? rectangleAreaContainment(coords, poly) :
-        rectangleAreaNoContainment(coords);
-
-        return largestRectangleArea;
+        return isRedGreen ? rectangleAreaContainment(coords) : rectangleAreaNoContainment(coords);
     }
 
-    private static List<Coordinate> parseCoordinates(List<String> fileContents) {
+    private static double[][] parseCoordinates(List<String> fileContents) {
         return fileContents.stream()
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .map(line -> {
                 String[] parts = line.split(",");
-                return new Coordinate(
-                    Integer.parseInt(parts[0]),
-                    Integer.parseInt(parts[1])
-                );
+                return new double[]{
+                    Double.parseDouble(parts[0]),
+                    Double.parseDouble(parts[1])
+                };
             })
-            .toList();
+            .toArray(double[][]::new);
     }
 
-    private static Polygon createPolygon(List<Coordinate> coords) {
-        // Ensure polygon is closed (last == first)
-        Coordinate[] arr = coords.toArray(new Coordinate[0]);
-
-        if (!arr[0].equals2D(arr[arr.length - 1])) {
-            Coordinate[] closed = Arrays.copyOf(arr, arr.length + 1);
-            closed[closed.length - 1] = arr[0];
-            arr = closed;
-        }
-
-        return gf.createPolygon(arr);
-    }
-
-    private static Stream<Coordinate[]> pairStream(List<Coordinate> coords) {
-        // Convert to array for faster access
-        Coordinate[] arr = coords.toArray(new Coordinate[0]);
-        int n = arr.length;
-
-        return IntStream.range(0, n)
-            .parallel() // Use parallel processing for large coordinate sets
-            .boxed()
-            .flatMap(i ->
-                IntStream.range(i + 1, n)
-                    .mapToObj(j -> new Coordinate[]{arr[i], arr[j]})
-            );
-    }
-
-    private static long rectangleArea(Coordinate c1, Coordinate c2) {
-        long w = Math.abs((long) c1.x - (long) c2.x) + 1;
-        long h = Math.abs((long) c1.y - (long) c2.y) + 1;
+    private static long rectangleArea(double[] c1, double[] c2) {
+        long w = Math.abs((long) c1[0] - (long) c2[0]) + 1;
+        long h = Math.abs((long) c1[1] - (long) c2[1]) + 1;
 
         return w * h;
     }
 
-    private static Polygon createRectangle(Coordinate c1, Coordinate c2) {
-        double xMin = Math.min(c1.x, c2.x);
-        double xMax = Math.max(c1.x, c2.x);
-        double yMin = Math.min(c1.y, c2.y);
-        double yMax = Math.max(c1.y, c2.y);
+    private static long rectangleAreaNoContainment(double[][] coords) {
+        int n = coords.length;
 
-        Coordinate[] rect = new Coordinate[] {
-            new Coordinate(xMin, yMin),
-            new Coordinate(xMax, yMin),
-            new Coordinate(xMax, yMax),
-            new Coordinate(xMin, yMax),
-            new Coordinate(xMin, yMin)
-        };
-
-        return gf.createPolygon(rect);
-    }
-
-    private static long rectangleAreaNoContainment(List<Coordinate> coords) {
-        return pairStream(coords)
-            .mapToLong(pair -> rectangleArea(pair[0], pair[1]))
+        return IntStream.range(0, n)
+            .parallel()
+            .boxed()
+            .flatMapToLong(i ->
+                IntStream.range(i + 1, n)
+                    .mapToLong(j -> rectangleArea(coords[i], coords[j]))
+            )
             .max()
             .orElse(0);
     }
 
-    private static long rectangleAreaContainment(List<Coordinate> coords, Polygon poly) {
+    private static long rectangleAreaContainment(double[][] coords) {
+        int n = coords.length;
+        Coordinate[] jtsCoords = new Coordinate[n + 1];
+
+        for (int i = 0; i < n; i++) {
+            jtsCoords[i] = new Coordinate(coords[i][0], coords[i][1]);
+        }
+
+        jtsCoords[n] = jtsCoords[0];  // Close the polygon
+
+        Polygon poly = gf.createPolygon(jtsCoords);
+        PreparedGeometry prepPoly = PreparedGeometryFactory.prepare(poly);
         Envelope envelope = poly.getEnvelopeInternal();
 
-        return pairStream(coords)
-            .filter(pair -> {
-                double xMin = Math.min(pair[0].x, pair[1].x);
-                double xMax = Math.max(pair[0].x, pair[1].x);
-                double yMin = Math.min(pair[0].y, pair[1].y);
-                double yMax = Math.max(pair[0].y, pair[1].y);
+        double envMinX = envelope.getMinX(), envMaxX = envelope.getMaxX();
+        double envMinY = envelope.getMinY(), envMaxY = envelope.getMaxY();
 
-                if (xMin < envelope.getMinX() || xMax > envelope.getMaxX() ||
-                    yMin < envelope.getMinY() || yMax > envelope.getMaxY()) {
-                    return false;
-                }
+        return IntStream.range(0, n)
+            .parallel()
+            .boxed()
+            .flatMapToLong(i ->
+                IntStream.range(i + 1, n)
+                    .filter(j -> {
+                        double[] c1 = coords[i];
+                        double[] c2 = coords[j];
 
-                Polygon rect = createRectangle(pair[0], pair[1]);
-                return poly.contains(rect);
-            })
-            .mapToLong(pair -> rectangleArea(pair[0], pair[1]))
+                        double xMin = Math.min(c1[0], c2[0]);
+                        double xMax = Math.max(c1[0], c2[0]);
+                        double yMin = Math.min(c1[1], c2[1]);
+                        double yMax = Math.max(c1[1], c2[1]);
+
+                        // Envelope check
+                        if (xMin < envMinX || xMax > envMaxX || yMin < envMinY || yMax > envMaxY) {
+                            return false;
+                        }
+
+                        // Create rectangle geometry and check containment using PreparedGeometry
+                        Coordinate[] rectCoords = new Coordinate[]{
+                            new Coordinate(xMin, yMin),
+                            new Coordinate(xMax, yMin),
+                            new Coordinate(xMax, yMax),
+                            new Coordinate(xMin, yMax),
+                            new Coordinate(xMin, yMin)
+                        };
+
+                        Polygon rect = gf.createPolygon(rectCoords);
+
+                        return prepPoly.contains(rect);
+                    })
+                    .mapToLong(j -> rectangleArea(coords[i], coords[j]))
+            )
             .max()
             .orElse(0);
     }
